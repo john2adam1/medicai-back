@@ -12,7 +12,7 @@ interface VitalMonitorProps {
 
 export const VitalMonitor: React.FC<VitalMonitorProps> = ({ stats }) => {
     return (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+        <div className="grid grid-cols-2 gap-4 w-full">
             {/* Heart Rate */}
             <VitalCard
                 label="Puls (HR)"
@@ -75,23 +75,23 @@ const VitalCard: React.FC<VitalCardProps> = ({ label, value, unit, icon, severit
             className={`vital-card glass-card-sm border-t-2 ${severityClasses[severity]}`}
         >
             <div className="flex items-center justify-between mb-2">
-                <span className="text-text-muted text-xs font-semibold uppercase tracking-wider">{label}</span>
+                <span className="text-text-muted text-[10px] font-black uppercase tracking-widest">{label}</span>
                 {icon}
             </div>
             <div className="flex items-baseline gap-1">
-                <span className={`text-2xl font-bold font-mono ${severity === 'normal' ? 'text-text-primary' :
-                        severity === 'warning' ? 'text-accent-warning' : 'text-accent-danger'
+                <span className={`text-xl font-bold font-mono ${severity === 'normal' ? 'text-text-primary' :
+                    severity === 'warning' ? 'text-accent-warning' : 'text-accent-danger'
                     }`}>
                     {value}
                 </span>
-                <span className="text-text-muted text-xs">{unit}</span>
+                <span className="text-text-muted text-[10px] font-bold uppercase">{unit}</span>
             </div>
 
             {/* Mini Chart Decoration */}
             <div className="mt-3 h-1 w-full bg-bg-secondary rounded-full overflow-hidden">
                 <motion.div
                     className={`h-full rounded-full ${severity === 'normal' ? 'bg-accent-primary' :
-                            severity === 'warning' ? 'bg-accent-warning' : 'bg-accent-danger'
+                        severity === 'warning' ? 'bg-accent-warning' : 'bg-accent-danger'
                         }`}
                     initial={{ width: 0 }}
                     animate={{ width: '80%' }}
