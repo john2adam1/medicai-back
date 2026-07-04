@@ -1,66 +1,42 @@
-# MedicAI Simulation Project
+# MedicAI Simulation Backend API
 
-Ushbu loyiha endi Frontend va Backend qismlariga ajratilgan. Bu arxitektura API-ni qayta ishlatish (mobil ilova, Telegram bot) va AI modullarini markazlashtirilgan holda boshqarish imkonini beradi.
+Bu loyiha MedicAI simulyatsiya tizimining backend qismidir. U AI (Gemini) yordamida klinik holatlarni va shifokor xatti-harakatlarini baholovchi API hisoblanadi.
+
+## Ishga Tushirish (Development)
+
+1. **Kutubxonalarni o'rnatish:**
+   ```bash
+   npm install
+   ```
+
+2. **Environment variable faylini yaratish:**
+   `.env.example` namunasidan foydalanib `.env` faylini yarating va quyidagi o'zgaruvchilarni kiriting:
+   ```env
+   PORT=4002
+   GEMINI_API_KEY=Sizning_Gemini_API_Kalitingiz
+   FRONTEND_URL=http://localhost:3000
+   ```
+
+3. **Lokal serverni ishga tushirish:**
+   ```bash
+   npm run dev
+   ```
+   Backend API `http://localhost:4002` (yoki belgilangan PORTda) ishga tushadi.
+
+## Bog'lanish Qo'llanmasi
+
+Tizim alohida frontend va backend dan iborat bo'lib, o'zaro veb-so'rovlar (REST API) orqali bog'lanadi. Ularni lokal va jonli (production) holatda qanday sozlash bo'yicha batafsil yo'riqnoma:
+👉 **[Bog'lanish Qo'llanmasi (CORS, Vercel, Local)](./docs/connection_guide.md)**
 
 ## Loyiha Tuzilishi
 
-- `/frontend`: Next.js (React) ilovasi. Foydalanuvchi interfeysi va chatbot UI.
-- `/backend`: Node.js (Express) API. Simulyatsiya logikasi, dori bazasi va agentlar.
+* `/src/index.ts` — API marshrutlari (Express setup, CORS va server ishga tushishi).
+* `/src/lib/ai-engine.ts` — Gemini API integratsiyasi (Scenario yaratish va xatti-harakatlarni baholash).
+* `/src/lib/types.ts` — Loyiha ma'lumotlar turlari (TypeScript types).
+* `/vercel.json` — Vercel-da standalone deploy qilish konfiguratsiyasi.
 
-## Ishga tushirish
+## Mavjud API Marshrutlari
 
-### 1. Backend-ni ishga tushirish
-```bash
-cd backend
-npm install
-npm run dev
-```
-Backend `http://localhost:4000` portida ishlaydi.
-
-### 2. Frontend-ni ishga tushirish
-```bash
-cd frontend
-npm install
-npm run dev
-```
-Frontend `http://localhost:3000` portida ishlaydi.
-
-## AI Modullarini (Agents) Ulash Yo'riqnomasi
-
-Hozirgi vaqtda agentlar (Analyst, Physiologist, Visualizer) `backend/src/lib/simulation-engine.ts` faylida qat'iy qoidalar (rule-based) asosida ishlaydi. Haqiqiy AI (LLM) ni ulash uchun quyidagi amallarni bajaring:
-
-### 1. SDK-ni o'rnating
-Backend papkasida:
-```bash
-npm install @google/generative-ai
-```
-
-### 2. Agent funksiyasini yangilang
-`simulation-engine.ts` ichidagi `agentAnalyst` funksiyasini shunday o'zgartirishingiz mumkin:
-
-```typescript
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-
-async function agentAnalystAI(action: DrugAction, stats: PatientStats, scenario: Scenario) {
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-  
-  const prompt = `
-    Siz tajribali shifokorsiz. Bemor holati: ${JSON.stringify(stats)}.
-    Ssenariy: ${scenario.title}. 
-    Foydalanuvchi harakati: ${action.drug_name} ${action.dose} ${action.route}.
-    Ushbu harakat to'g'rimi? Feedback bering va score impact (-50 dan +50 gacha) ni qaytaring.
-    Faqat JSON formatida javob bering.
-  `;
-
-  const result = await model.generateContent(prompt);
-  return JSON.parse(result.response.text());
-}
-```
-
-### 3. Arxitektura afzalligi
-Endi siz Backend-ni o'zida AIni yangilasangiz, u barcha platformalarda (Frontend, Mobil ilova, Telegram bot) bir vaqtda yangilanadi.
-
----
-**MedicAI Team**
+* `POST /api/start` — Yangi ssenariyni generator qiladi.
+* `POST /api/action` — Shifokor xatti-harakatini baholaydi va bemor holatini yangilaydi.
+* `GET /api/health` — API ishlash holatini tekshirish.
