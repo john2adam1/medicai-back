@@ -5,8 +5,8 @@
             "framework": "nextjs"
         },
         "backend": {
-            "root": "backend",
-            "buildCommand": "npm run build"
+            "buildCommand": "npm run build",
+            "entrypoint": "backend/dist/index.js"
         }
     },
     "rewrites": [
