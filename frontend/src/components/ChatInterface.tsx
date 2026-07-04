@@ -1,196 +1,177 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, Mic, MicOff, Stethoscope, User, Bot, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useGameStore } from '@/lib/store';
+import { Send, Mic, MicOff, Bot, User, Stethoscope } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ChatMessage } from '@/lib/types';
+
+function FeedbackBadge({ type }: { type: string }) {
+    const map: Record<string, { label: string; cls: string }> = {
+        success: { label: 'Correct', cls: 'bg-[#06d6a0]/10 text-[#06d6a0] border-[#06d6a0]/20' },
+        error: { label: 'Incorrect', cls: 'bg-[#ef476f]/10 text-[#ef476f] border-[#ef476f]/20' },
+        warning: { label: 'Caution', cls: 'bg-[#ffd166]/10 text-[#ffd166] border-[#ffd166]/20' },
+        info: { label: 'Info', cls: 'bg-[#73d2de]/10 text-[#73d2de] border-[#73d2de]/20' },
+    };
+    const { label, cls } = map[type] || map.info;
+    return <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${cls}`}>{label}</span>;
+}
+
+function MessageBubble({ msg }: { msg: ChatMessage }) {
+    if (msg.role === 'system') {
+        return (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#73d2de]/10 border border-[#73d2de]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Stethoscope className="w-4 h-4 text-[#73d2de]" />
+                </div>
+                <div className="bubble-system flex-1">
+                    <p className="text-[10px] font-bold text-[#73d2de] uppercase tracking-wider mb-1">Initial Presentation</p>
+                    <p className="text-sm text-[#f0f0f0] leading-relaxed">{msg.content}</p>
+                </div>
+            </motion.div>
+        );
+    }
+
+    if (msg.role === 'user') {
+        return (
+            <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="flex gap-3 justify-end">
+                <div className="bubble-user">
+                    <p className="text-sm">{msg.content}</p>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-[#06d6a0]/10 border border-[#06d6a0]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <User className="w-4 h-4 text-[#06d6a0]" />
+                </div>
+            </motion.div>
+        );
+    }
+
+    const feedbackType = msg.metadata?.feedback_type;
+    const borderCls = feedbackType === 'success' ? 'border-[#06d6a0]/20' :
+        feedbackType === 'error' ? 'border-[#ef476f]/20' :
+        feedbackType === 'warning' ? 'border-[#ffd166]/20' : '';
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 border ${
+                feedbackType === 'error' ? 'bg-[#ef476f]/10 border-[#ef476f]/20' :
+                feedbackType === 'success' ? 'bg-[#06d6a0]/10 border-[#06d6a0]/20' :
+                'bg-[#1a1a1a] border-[rgba(255,255,255,0.08)]'
+            }`}>
+                <Bot className={`w-4 h-4 ${feedbackType === 'error' ? 'text-[#ef476f]' : feedbackType === 'success' ? 'text-[#06d6a0]' : 'text-[#a0a0a0]'}`} />
+            </div>
+            <div className={`bubble-ai flex-1 ${borderCls}`}>
+                <div className="flex items-center gap-2 mb-2">
+                    {feedbackType && <FeedbackBadge type={feedbackType} />}
+                    {msg.metadata?.score_impact !== undefined && (
+                        <span className={`text-[10px] font-mono font-bold ${msg.metadata.score_impact >= 0 ? 'text-[#06d6a0]' : 'text-[#ef476f]'}`}>
+                            {msg.metadata.score_impact >= 0 ? '+' : ''}{msg.metadata.score_impact} pts
+                        </span>
+                    )}
+                </div>
+                <p className="text-sm text-[#f0f0f0] leading-relaxed whitespace-pre-line">{msg.content}</p>
+            </div>
+        </motion.div>
+    );
+}
 
 export const ChatInterface: React.FC = () => {
     const [input, setInput] = useState('');
     const [isListening, setIsListening] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
-    const {
-        scenario,
-        history,
-        performAction,
-        isGameOver
-    } = useGameStore();
+    const { messages, sendAction, isProcessing, isGameOver, scenario } = useGameStore();
 
-    // Auto scroll to bottom
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [history, input]);
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    }, [messages, isProcessing]);
 
     const handleSend = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
-        if (!input.trim() || isGameOver) return;
-
-        // Simple parsing logic
-        // In a real app, this would be an AI call or complex regex
-        // For now, let's try to extract drug name and dose
-        const parts = input.toLowerCase().split(' ');
-        let drugName = '';
-        let dose = '1 dose';
-        let route: any = 'IV';
-
-        // Very basic extraction for the demo
-        if (parts.length > 0) {
-            drugName = parts[0];
-            if (parts.length > 1) dose = parts[1];
-            if (input.toLowerCase().includes('im')) route = 'IM';
-            if (input.toLowerCase().includes('po')) route = 'PO';
-        }
-
-        performAction({
-            drug_name: drugName,
-            dose: dose,
-            route: route
-        });
-
+        if (!input.trim() || isGameOver || isProcessing) return;
+        sendAction(input.trim());
         setInput('');
+        inputRef.current?.focus();
     };
 
     const toggleVoice = () => {
-        if (!('webkitSpeechRecognition' in window) && !('speechRecognition' in window)) {
-            alert('Brauzeringiz ovozli qidiruvni qo\'llab-quvvatlamaydi.');
-            return;
-        }
-
-        if (isListening) {
-            setIsListening(false);
-            return;
-        }
-
-        const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).speechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'uz-UZ';
-        recognition.continuous = false;
-        recognition.interimResults = false;
-
-        recognition.onstart = () => setIsListening(true);
-        recognition.onend = () => setIsListening(false);
-        recognition.onresult = (event: any) => {
-            const transcript = event.results[0][0].transcript;
-            setInput(transcript);
-            setIsListening(false);
-        };
-
-        recognition.start();
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+        if (isListening) { setIsListening(false); return; }
+        const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+        const r = new SR();
+        r.lang = 'en-US';
+        r.continuous = false;
+        r.interimResults = false;
+        r.onstart = () => setIsListening(true);
+        r.onend = () => setIsListening(false);
+        r.onerror = () => setIsListening(false);
+        r.onresult = (e: any) => { setInput(e.results[0][0].transcript); setIsListening(false); };
+        r.start();
     };
 
     return (
-        <div className="flex flex-col h-full glass-card overflow-hidden">
-            {/* Chat Messages */}
-            <div
-                ref={scrollRef}
-                className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth"
-            >
-                {/* Initial Presentation (Bot) */}
-                {scenario && (
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-start gap-4"
-                    >
-                        <div className="w-10 h-10 rounded-full bg-accent-info/20 flex items-center justify-center flex-shrink-0 border border-accent-info/30">
-                            <Bot className="w-5 h-5 text-accent-info" />
+        <div className="flex flex-col h-full">
+            {/* Scenario header */}
+            {scenario && (
+                <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.05)] flex items-center justify-between flex-shrink-0">
+                    <div>
+                        <h3 className="text-sm font-semibold text-[#f0f0f0]">{scenario.title}</h3>
+                        <p className="text-xs text-[#606060]">{scenario.difficulty} · {scenario.topic}</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Messages */}
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messages.map((msg) => <MessageBubble key={msg.id} msg={msg} />)}
+
+                {isProcessing && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#1a1a1a] border border-[rgba(255,255,255,0.08)] flex items-center justify-center flex-shrink-0">
+                            <Bot className="w-4 h-4 text-[#a0a0a0]" />
                         </div>
-                        <div className="chat-bubble-ai">
-                            <div className="text-[10px] font-black text-accent-info uppercase tracking-widest mb-1">MedicAI • Boshlang'ich Holat</div>
-                            <p className="text-sm leading-relaxed">{scenario.initial_presentation}</p>
+                        <div className="bubble-ai">
+                            <div className="flex gap-1 items-center">
+                                {[0, 0.15, 0.3].map((d, i) => (
+                                    <motion.div key={i} className="w-1.5 h-1.5 rounded-full bg-[#06d6a0]"
+                                        animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.8, delay: d }} />
+                                ))}
+                            </div>
                         </div>
                     </motion.div>
                 )}
 
-                {/* History */}
-                {history.map((msg, idx) => (
-                    <React.Fragment key={idx}>
-                        {/* User "Action" Message */}
-                        <motion.div
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="flex items-start gap-4 justify-end"
-                        >
-                            <div className="chat-bubble-user">
-                                <p className="text-sm italic opacity-80 mb-1">Dori yuborish:</p>
-                                <p className="text-sm font-bold">{msg.medical_text.split(' berildi')[0]}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-accent-primary/20 flex items-center justify-center flex-shrink-0 border border-accent-primary/30">
-                                <User className="w-5 h-5 text-accent-primary" />
-                            </div>
-                        </motion.div>
-
-                        {/* Bot "Feedback" Message */}
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="flex items-start gap-4"
-                        >
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border ${msg.feedback_type === 'error' ? 'bg-accent-danger/20 border-accent-danger/30 text-accent-danger' :
-                                    msg.feedback_type === 'success' ? 'bg-accent-primary/20 border-accent-primary/30 text-accent-primary' :
-                                        'bg-accent-info/20 border-accent-info/30 text-accent-info'
-                                }`}>
-                                <Bot className="w-5 h-5" />
-                            </div>
-                            <div className={`chat-bubble-ai ${msg.feedback_type === 'error' ? 'border-accent-danger/30' :
-                                    msg.feedback_type === 'success' ? 'border-accent-primary/30' : ''
-                                }`}>
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className={`text-[10px] font-black uppercase tracking-widest ${msg.feedback_type === 'error' ? 'text-accent-danger' :
-                                            msg.feedback_type === 'success' ? 'text-accent-primary' : 'text-accent-info'
-                                        }`}>
-                                        MedicAI • {msg.feedback_type.toUpperCase()}
-                                    </span>
-                                    <span className="text-[10px] text-text-muted font-bold">+{msg.elapsed_time} daq</span>
-                                </div>
-                                <p className="text-sm leading-relaxed mb-2">{msg.feedback}</p>
-                                <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black ${msg.score_impact >= 0 ? 'bg-accent-primary/10 text-accent-primary' : 'bg-accent-danger/10 text-accent-danger'
-                                    }`}>
-                                    {msg.score_impact >= 0 ? '+' : ''}{msg.score_impact} Ball
-                                </div>
-                            </div>
-                        </motion.div>
-                    </React.Fragment>
-                ))}
+                {isGameOver && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        className="p-3 rounded-xl text-center text-sm text-[#a0a0a0] border border-[rgba(255,255,255,0.06)] bg-[#1a1a1a]">
+                        Simulation ended
+                    </motion.div>
+                )}
             </div>
 
-            {/* Input Area */}
-            <div className="p-4 border-t border-white/5 bg-bg-secondary/50">
-                <form onSubmit={handleSend} className="flex gap-3">
-                    <button
-                        type="button"
-                        onClick={toggleVoice}
-                        className={`voice-btn flex-shrink-0 ${isListening ? 'active' : ''}`}
-                        title="Ovozli kiritish"
-                    >
-                        {isListening ? <Mic className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            {/* Input area */}
+            <div className="p-3 border-t border-[rgba(255,255,255,0.05)] flex-shrink-0">
+                <form onSubmit={handleSend} className="flex gap-2">
+                    <button type="button" onClick={toggleVoice}
+                        className={`btn-icon flex-shrink-0 ${isListening ? 'bg-[#ef476f]/20 border-[#ef476f]/40 text-[#ef476f]' : ''}`}
+                        title="Voice input">
+                        {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                     </button>
-
-                    <div className="relative flex-1">
-                        <input
-                            type="text"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            placeholder="Masalan: Adrenalin 1mg IV yoki Kislorod..."
-                            className="drug-input pr-12 h-12"
-                            disabled={isGameOver}
-                        />
-                        <button
-                            type="submit"
-                            disabled={!input || isGameOver}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-accent-primary text-bg-primary flex items-center justify-center transition-all hover:scale-110 disabled:opacity-30"
-                        >
-                            <Send className="w-4 h-4" />
-                        </button>
-                    </div>
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder={isProcessing ? 'Analyzing...' : isGameOver ? 'Simulation ended' : 'Enter action (e.g. Give aspirin 300mg, Check ECG...)'}
+                        className="chat-input flex-1"
+                        disabled={isGameOver || isProcessing}
+                    />
+                    <button type="submit" disabled={!input.trim() || isGameOver || isProcessing}
+                        className="btn-icon flex-shrink-0 bg-[#06d6a0] border-[#06d6a0] text-[#0f0f0f] hover:bg-[#05c090] disabled:opacity-30 disabled:cursor-not-allowed">
+                        <Send className="w-4 h-4" />
+                    </button>
                 </form>
-                <div className="mt-2 flex items-center gap-4 text-[10px] text-text-muted font-bold uppercase tracking-widest px-2">
-                    <div className="flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Dori nomi va dozani kiriting</div>
-                    <div className="flex items-center gap-1"><Mic className="w-3 h-3" /> Ovoz orqali gapiring</div>
-                </div>
+                <p className="text-[10px] text-[#606060] mt-2 px-1">Type any clinical action — diagnosis, medications, procedures</p>
             </div>
         </div>
     );

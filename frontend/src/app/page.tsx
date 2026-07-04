@@ -1,218 +1,95 @@
 "use client";
 
 import React, { useEffect } from 'react';
-import { useGameStore } from '@/lib/store';
-import { ScenarioSelection } from '@/components/ScenarioSelection';
+import { useGameStore, getGrade } from '@/lib/store';
+import { TopicInput } from '@/components/TopicInput';
 import { VitalMonitor } from '@/components/VitalMonitor';
 import { PatientVisualizer } from '@/components/PatientVisualizer';
 import { ChatInterface } from '@/components/ChatInterface';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Trophy,
-  Clock,
-  RotateCcw,
-  ArrowLeft,
-  AlertTriangle,
-  Heart,
-  ChevronRight,
-  Activity
-} from 'lucide-react';
+import { RotateCcw, Trophy, AlertTriangle, Heart } from 'lucide-react';
 
 export default function Home() {
-  const {
-    scenario,
-    currentStats,
-    isAlive,
-    score,
-    elapsedMinutes,
-    isGameOver,
-    gameOverReason,
-    setScenario,
-    resetGame,
-    initialize
-  } = useGameStore();
+    const { scenario, isGameOver, gameOverReason, simulationStatus, isAlive, score, resetGame, updateTime } = useGameStore();
 
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
+    useEffect(() => {
+        if (!scenario || isGameOver) return;
+        const interval = setInterval(() => updateTime(0.5), 30000);
+        return () => clearInterval(interval);
+    }, [scenario, isGameOver, updateTime]);
 
-  const progress = scenario ? (elapsedMinutes / scenario.time_limit_minutes) * 100 : 0;
+    return (
+        <main className="min-h-screen bg-[#0f0f0f] text-[#f0f0f0]">
+            <AnimatePresence mode="wait">
+                {!scenario ? (
+                    <motion.div key="start" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        <TopicInput />
+                    </motion.div>
+                ) : (
+                    <motion.div key="sim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="flex h-screen overflow-hidden">
 
-  return (
-    <main className="min-h-screen bg-bg-primary text-text-primary overflow-x-hidden">
-      {/* Background Decor */}
-      <div className="fixed inset-0 pointer-events-none opacity-30">
-        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-accent-primary/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-accent-secondary/5 blur-[150px] rounded-full" />
-        <div className="absolute inset-0 bg-grid opacity-20" />
-      </div>
+                        {/* Left panel */}
+                        <aside className="w-[260px] flex-shrink-0 border-r border-[rgba(255,255,255,0.06)] flex flex-col overflow-y-auto">
+                            {/* Header */}
+                            <div className="p-3 border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between flex-shrink-0">
+                                <div className="flex items-center gap-2">
+                                    <Heart className="w-4 h-4 text-[#06d6a0] animate-heartbeat" />
+                                    <span className="text-sm font-bold">MedicAI</span>
+                                </div>
+                                <button onClick={resetGame}
+                                    className="btn-icon w-7 h-7"
+                                    title="New simulation">
+                                    <RotateCcw className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
 
-      <div className="relative z-10">
-        <AnimatePresence mode="wait">
-          {!scenario ? (
-            <motion.div
-              key="selection"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="py-12"
-            >
-              <ScenarioSelection onSelect={(s) => setScenario(s)} />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="game"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col h-screen"
-            >
-              {/* Top Navigation */}
-              <header className="glass-card-sm rounded-none border-x-0 border-t-0 px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={resetGame}
-                    className="p-2 hover:bg-white/5 rounded-full transition-colors text-text-muted hover:text-text-primary"
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </button>
-                  <div>
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-primary">MedicAI Simulation</span>
-                      <ChevronRight className="w-3 h-3 text-text-muted" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary">{scenario.difficulty}</span>
-                    </div>
-                    <h2 className="text-lg font-black tracking-tight">{scenario.title}</h2>
-                  </div>
-                </div>
+                            {/* Patient + Vitals */}
+                            <div className="p-3 space-y-3 flex-1">
+                                <PatientVisualizer />
+                                <VitalMonitor />
+                            </div>
+                        </aside>
 
-                <div className="flex items-center gap-8">
-                  <div className="hidden md:block">
-                    <div className="flex items-center gap-6">
-                      <div className="text-right">
-                        <div className="text-[10px] text-text-muted font-black uppercase tracking-widest mb-1">Elapsed Time</div>
-                        <div className="flex items-center gap-2 justify-end">
-                          <Clock className="w-3.5 h-3.5 text-accent-info" />
-                          <span className="text-sm font-mono font-bold">{elapsedMinutes} / {scenario.time_limit_minutes}m</span>
-                        </div>
-                      </div>
-                      <div className="text-right border-l border-white/10 pl-6">
-                        <div className="text-[10px] text-text-muted font-black uppercase tracking-widest mb-1">Score</div>
-                        <div className="flex items-center gap-2 justify-end">
-                          <Trophy className="w-3.5 h-3.5 text-accent-warning" />
-                          <span className="text-sm font-mono font-bold text-accent-warning">{score}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                        {/* Right: Chat */}
+                        <section className="flex-1 flex flex-col min-w-0">
+                            <ChatInterface />
+                        </section>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-                  <button
-                    onClick={resetGame}
-                    className="p-2.5 bg-bg-secondary hover:bg-bg-card-hover rounded-xl transition-all group border border-white/5"
-                  >
-                    <RotateCcw className="w-5 h-5 text-text-muted group-hover:rotate-180 transition-transform duration-500" />
-                  </button>
-                </div>
-              </header>
-
-              {/* Main Workspace */}
-              <div className="flex-1 flex overflow-hidden">
-                {/* Left Side: Vitals & Visualizer */}
-                <aside className="w-[300px] lg:w-[350px] border-r border-white/5 flex flex-col bg-bg-primary/50 overflow-y-auto">
-                  <div className="p-4 space-y-4">
-                    <div className="glass-card overflow-hidden">
-                      <div className="p-3 border-b border-white/5 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Activity className="w-4 h-4 text-accent-primary" />
-                          <span className="text-[10px] font-black uppercase tracking-widest">Bemor Holati</span>
-                        </div>
-                        <div className={`status-dot ${isAlive ? 'status-alive' : 'status-dead'}`} />
-                      </div>
-                      <PatientVisualizer />
-                    </div>
-
-                    <VitalMonitor stats={currentStats} />
-                  </div>
-                </aside>
-
-                {/* Right Side: Chat Interface */}
-                <section className="flex-1 flex flex-col min-w-0 bg-bg-secondary/20">
-                  <div className="flex-1 relative">
-                    <ChatInterface />
-                  </div>
-                </section>
-              </div>
-
-              {/* Progress Footer */}
-              <div className="h-1 w-full bg-bg-secondary overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  className="h-full bg-gradient-to-r from-accent-primary to-accent-info"
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Game Over Modal */}
-        <AnimatePresence>
-          {isGameOver && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-bg-primary/95 backdrop-blur-xl"
-            >
-              <motion.div
-                initial={{ scale: 0.9, y: 20 }}
-                animate={{ scale: 1, y: 0 }}
-                className="glass-card w-full max-sm p-10 text-center border-border-glow shadow-2xl relative overflow-hidden"
-              >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accent-primary to-transparent" />
-
-                <div className={`w-24 h-24 rounded-3xl mx-auto flex items-center justify-center mb-8 rotate-12 transition-transform hover:rotate-0 duration-500 ${isAlive ? 'bg-accent-primary/10 text-accent-primary' : 'bg-accent-danger/10 text-accent-danger'}`}>
-                  {isAlive ? <Trophy className="w-12 h-12" /> : <AlertTriangle className="w-12 h-12" />}
-                </div>
-
-                <h2 className="text-3xl font-black mb-3 tracking-tighter uppercase">
-                  {isAlive ? 'Ssenariy Yakunlandi' : 'Klinik O\'lim'}
-                </h2>
-                <p className="text-text-secondary mb-10 text-sm leading-relaxed">
-                  {gameOverReason || (isAlive ? "Siz bemorni stabilizatsiya qilishga muvaffaq bo'ldingiz." : "Afsuski, bemor hayotdan ko'z yumdi.")}
-                </p>
-
-                <div className="grid grid-cols-2 gap-4 mb-10">
-                  <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
-                    <div className="text-[10px] text-text-muted font-black uppercase mb-1 tracking-widest">Natija</div>
-                    <div className="text-2xl font-mono font-black text-accent-warning">{score}</div>
-                  </div>
-                  <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
-                    <div className="text-[10px] text-text-muted font-black uppercase mb-1 tracking-widest">Vaqt</div>
-                    <div className="text-2xl font-mono font-black text-accent-info">{elapsedMinutes}m</div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <button onClick={resetGame} className="btn-primary w-full py-5 text-base rounded-2xl">
-                    QAYTA BOSHLASH
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Footer Floating Branding */}
-      {!scenario && (
-        <footer className="fixed bottom-8 left-0 w-full text-center pointer-events-none opacity-40">
-          <div className="flex items-center justify-center gap-3">
-            <Heart className="w-5 h-5 fill-accent-primary text-accent-primary animate-heartbeat" />
-            <span className="text-sm font-black tracking-[0.3em] uppercase">MedicAI Simulation Core v2.0</span>
-          </div>
-        </footer>
-      )}
-    </main>
-  );
+            {/* Game Over Modal */}
+            <AnimatePresence>
+                {isGameOver && scenario && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
+                            className="card w-full max-w-sm p-8 text-center">
+                            <div className={`w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-5 ${isAlive ? 'bg-[#06d6a0]/10' : 'bg-[#ef476f]/10'}`}>
+                                {isAlive ? <Trophy className="w-8 h-8 text-[#06d6a0]" /> : <AlertTriangle className="w-8 h-8 text-[#ef476f]" />}
+                            </div>
+                            <h2 className="text-xl font-bold mb-2">
+                                {simulationStatus === 'success' ? 'Patient Stabilized' : isAlive ? 'Simulation Over' : 'Patient Deceased'}
+                            </h2>
+                            <p className="text-sm text-[#a0a0a0] mb-6">{gameOverReason}</p>
+                            <div className="grid grid-cols-2 gap-3 mb-6">
+                                <div className="card-sm p-3">
+                                    <p className="text-xs text-[#606060] mb-1">Grade</p>
+                                    <p className="text-xl font-mono font-bold text-[#ffd166]">{getGrade(score)}</p>
+                                </div>
+                                <div className="card-sm p-3">
+                                    <p className="text-xs text-[#606060] mb-1">Score</p>
+                                    <p className="text-xl font-mono font-bold text-[#73d2de]">{score}</p>
+                                </div>
+                            </div>
+                            <button onClick={resetGame} className="btn btn-green w-full py-3 rounded-xl">
+                                New Simulation
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </main>
+    );
 }
