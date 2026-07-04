@@ -9,7 +9,17 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+        // Allow requests with no origin (curl, Postman, same-origin Vercel rewrites)
+        if (!origin) return callback(null, true);
+        const allowed = [
+            /^http:\/\/localhost(:\d+)?$/,
+            /^https:\/\/.*\.vercel\.app$/,
+        ];
+        if (process.env.FRONTEND_URL) allowed.push(new RegExp(`^${process.env.FRONTEND_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
+        if (allowed.some(r => r.test(origin))) return callback(null, true);
+        callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST'],
     credentials: true
 }));
