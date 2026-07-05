@@ -28,6 +28,33 @@ export interface AIScenario {
     time_limit_minutes: number;
 }
 
+export interface ChatMessage {
+    id: string;
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    metadata?: {
+        feedback_type?: 'success' | 'error' | 'warning' | 'info';
+        score_impact?: number;
+        health_bar?: number;
+        elapsed_time?: number;
+    };
+}
+
+export interface RecommendedScenario {
+    topic: string;
+    difficulty: "Easy" | "Medium" | "Hard";
+    reason: string;
+}
+
+export interface UserProfile {
+    id: string;
+    email: string;
+    passwordHash: string;
+    course_level?: string;
+    weak_topics?: string[];
+    is_doctor?: boolean;
+}
+
 export interface ActionResult {
     simulation_status: 'in_progress' | 'success' | 'failed';
     medical_text: string;

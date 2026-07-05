@@ -143,3 +143,24 @@ Rules: correct actions improve vitals and score; wrong/harmful actions worsen th
   const text = await generateWithRetry(prompt);
   return parseJSON<ActionResult>(text);
 }
+
+export async function generateRecommendations(
+  courseLevel: string,
+  isDoctor: boolean,
+  weakTopics: string[]
+): Promise<any> {
+  const prompt = `You are a medical simulation AI. The user is a ${isDoctor ? 'doctor' : 'medical student'} at level: ${courseLevel || 'beginner'}.
+They identified weak knowledge in these topics: ${(weakTopics && weakTopics.length) ? weakTopics.join(', ') : 'general medicine'}.
+Recommend 3 clinical scenario topics they should practice to improve their specific skills.
+
+Respond ONLY with a valid JSON array matching this format (no markdown codeblocks, just the JSON):
+[
+  {
+    "topic": "Specific Clinical Case (e.g. Tension Pneumothorax)",
+    "difficulty": "Easy|Medium|Hard",
+    "reason": "1 short sentence why this helps them"
+  }
+]`;
+  const text = await generateWithRetry(prompt);
+  return parseJSON(text);
+}
