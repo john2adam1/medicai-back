@@ -1,20 +1,20 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AIScenario, ActionResult, PatientStats, VisualState } from './types';
 
-let _client: GoogleGenerativeAI | null = null;
-function getClient() {
-  if (!_client) _client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-  return _client;
-}
+let _model: ReturnType<InstanceType<typeof GoogleGenerativeAI>['getGenerativeModel']> | null = null;
 
 function getModel() {
-  return getClient().getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    generationConfig: {
-      responseMimeType: 'application/json',
-      maxOutputTokens: 4096,
-    },
-  });
+  if (!_model) {
+    const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    _model = client.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      generationConfig: {
+        responseMimeType: 'application/json',
+        maxOutputTokens: 4096,
+      },
+    });
+  }
+  return _model;
 }
 
 async function generateWithRetry(prompt: string, retries = 2): Promise<string> {

@@ -5,6 +5,11 @@ import { generateScenario, processAction } from './lib/ai-engine';
 
 dotenv.config();
 
+if (!process.env.GEMINI_API_KEY) {
+    console.error("FATAL ERROR: GEMINI_API_KEY environment variable is missing.");
+    process.exit(1);
+}
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
