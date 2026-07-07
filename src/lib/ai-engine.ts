@@ -38,8 +38,14 @@ async function generateWithRetry(prompt: string, retries = 2): Promise<string> {
 }
 
 function parseJSON<T>(text: string): T {
-  const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-  return JSON.parse(cleaned);
+  try {
+    const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch (err) {
+    console.error('Failed to parse JSON. Raw text was:\n', text);
+    require('fs').writeFileSync('D:/projects/medicai-back/ai_error.log', text);
+    throw new Error('Failed to parse JSON response from AI');
+  }
 }
 
 const DIFFICULTY_GUIDANCE: Record<string, string> = {
@@ -51,9 +57,10 @@ const DIFFICULTY_GUIDANCE: Record<string, string> = {
 export async function generateScenario(
   topic: string,
   difficulty: 'Easy' | 'Medium' | 'Hard' = 'Medium',
-  timeLimitMinutes: number = 30
+  timeLimitMinutes: number = 30,
+  language: string = 'uz'
 ): Promise<AIScenario> {
-  const prompt = `You are a medical simulation AI. Respond ONLY with valid JSON, no markdown or explanation.
+  const prompt = `You are a medical simulation AI. Respond ONLY with valid JSON, no markdown or explanation. IMPORTANT: All generative text (title, description, initial_presentation) MUST be written in this language: ${language} (but JSON keys must remain exactly as specified in English).
 
 Generate a realistic clinical scenario for a medical trainee on this topic: "${topic}".
 
@@ -98,9 +105,10 @@ export async function processAction(
   currentVisual: VisualState,
   healthBar: number,
   elapsedMinutes: number,
-  actionHistory: string[]
+  actionHistory: string[],
+  language: string = 'uz'
 ): Promise<ActionResult> {
-  const prompt = `You are a medical simulation AI evaluating clinical decisions. Respond ONLY with valid JSON, no markdown.
+  const prompt = `You are a medical simulation AI evaluating clinical decisions. Respond ONLY with valid JSON, no markdown. IMPORTANT: All text string values in the JSON (medical_text, feedback, game_over_reason) MUST be written in this language: ${language}.
 
 Scenario: ${scenario.title} — ${scenario.description}
 Topic: ${scenario.topic}
@@ -147,11 +155,12 @@ Rules: correct actions improve vitals and score; wrong/harmful actions worsen th
 export async function generateRecommendations(
   courseLevel: string,
   isDoctor: boolean,
-  weakTopics: string[]
+  weakTopics: string[],
+  language: string = 'uz'
 ): Promise<any> {
   const prompt = `You are a medical simulation AI. The user is a ${isDoctor ? 'doctor' : 'medical student'} at level: ${courseLevel || 'beginner'}.
 They identified weak knowledge in these topics: ${(weakTopics && weakTopics.length) ? weakTopics.join(', ') : 'general medicine'}.
-Recommend 3 clinical scenario topics they should practice to improve their specific skills.
+Recommend 3 clinical scenario topics they should practice to improve their specific skills. IMPORTANT: The "topic" and "reason" values MUST be provided in this language: ${language}.
 
 Respond ONLY with a valid JSON array matching this format (no markdown codeblocks, just the JSON):
 [
