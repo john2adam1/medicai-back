@@ -66,6 +66,31 @@ export async function generateScenario(
   timeLimitMinutes: number = 30,
   language: string = 'uz'
 ): Promise<AIScenario> {
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.includes('your_gemini')) {
+    console.warn("Using fallback scenario generator (GEMINI_API_KEY not configured).");
+    return {
+      title: topic,
+      description: `${topic} bo'yicha tibbiy simulatsiya holati`,
+      difficulty,
+      initial_presentation: `Bemor (45 yosh) shifoxonaga ${topic} belgilari bilan keltirildi. Qon bosimi va puls o'zgargan.`,
+      topic,
+      patient_stats: {
+        hr: 105,
+        bp: '130/85',
+        spo2: 95,
+        rr: 20,
+        temp: 37.0,
+        gcs: 15
+      },
+      visual_state: {
+        spline_state: 'Pain',
+        skin_color: 'pale',
+        monitor_sound: 'fast_beep'
+      },
+      time_limit_minutes: timeLimitMinutes
+    };
+  }
+
   const prompt = `You are a medical simulation AI. Respond ONLY with valid JSON, no markdown or explanation. IMPORTANT: All generative text (title, description, initial_presentation) MUST be written in this language: ${language} (but JSON keys must remain exactly as specified in English).
 
 Generate a realistic clinical scenario for a medical trainee on this topic: "${topic}".
@@ -96,12 +121,25 @@ Return this exact JSON structure:
   "time_limit_minutes": ${timeLimitMinutes}
 }`;
 
-  const text = await generateWithRetry(prompt);
-  const scenario = parseJSON<AIScenario>(text);
-  // Enforce the user's chosen difficulty and time limit regardless of model output.
-  scenario.difficulty = difficulty;
-  scenario.time_limit_minutes = timeLimitMinutes;
-  return scenario;
+  try {
+    const text = await generateWithRetry(prompt);
+    const scenario = parseJSON<AIScenario>(text);
+    scenario.difficulty = difficulty;
+    scenario.time_limit_minutes = timeLimitMinutes;
+    return scenario;
+  } catch (err) {
+    console.error("AI generateScenario failed, using fallback:", err);
+    return {
+      title: topic,
+      description: `${topic} bo'yicha tibbiy simulatsiya holati`,
+      difficulty,
+      initial_presentation: `Bemor shifoxonaga ${topic} shikoyati bilan keltirildi.`,
+      topic,
+      patient_stats: { hr: 100, bp: '120/80', spo2: 96, rr: 18, temp: 36.6, gcs: 15 },
+      visual_state: { spline_state: 'Idle', skin_color: 'normal', monitor_sound: 'normal_beep' },
+      time_limit_minutes: timeLimitMinutes
+    };
+  }
 }
 
 export async function processAction(
@@ -114,6 +152,27 @@ export async function processAction(
   actionHistory: string[],
   language: string = 'uz'
 ): Promise<ActionResult> {
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.includes('your_gemini')) {
+    console.warn("Using fallback action processor (GEMINI_API_KEY not configured).");
+    return {
+      simulation_status: 'in_progress',
+      medical_text: `Shifokor harakati bajarildi: "${action}". Bemor nazoratda.`,
+      feedback: `Harakat qabul qilindi: ${action}`,
+      feedback_type: 'info',
+      patient_stats: {
+        ...currentStats,
+        hr: Math.max(60, currentStats.hr - 2),
+        spo2: Math.min(100, currentStats.spo2 + 1)
+      },
+      visual_state: currentVisual,
+      score_impact: 10,
+      health_bar: Math.min(100, healthBar + 5),
+      is_alive: true,
+      game_over: false,
+      game_over_reason: undefined
+    };
+  }
+
   const prompt = `You are a medical simulation AI evaluating clinical decisions. Respond ONLY with valid JSON, no markdown. IMPORTANT: All text string values in the JSON (medical_text, feedback, game_over_reason) MUST be written in this language: ${language}.
 
 Scenario: ${scenario.title} — ${scenario.description}
@@ -154,8 +213,25 @@ Evaluate medically and return JSON:
 
 Rules: correct actions improve vitals and score; wrong/harmful actions worsen them. If vitals reach critically dangerous levels, set game_over true. Set success if patient stabilizes (SpO2>=95, HR 60-100, SBP 90-140, health_bar>=80).`;
 
-  const text = await generateWithRetry(prompt);
-  return parseJSON<ActionResult>(text);
+  try {
+    const text = await generateWithRetry(prompt);
+    return parseJSON<ActionResult>(text);
+  } catch (err) {
+    console.error("AI processAction failed, using fallback:", err);
+    return {
+      simulation_status: 'in_progress',
+      medical_text: `Harakat bajarildi: "${action}".`,
+      feedback: `Tibbiy muolaja ko'rsatildi.`,
+      feedback_type: 'info',
+      patient_stats: currentStats,
+      visual_state: currentVisual,
+      score_impact: 5,
+      health_bar: healthBar,
+      is_alive: true,
+      game_over: false,
+      game_over_reason: undefined
+    };
+  }
 }
 
 export async function generateRecommendations(
@@ -164,6 +240,18 @@ export async function generateRecommendations(
   weakTopics: string[],
   language: string = 'uz'
 ): Promise<any> {
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.includes('your_gemini')) {
+    console.warn("Using fallback recommendations (GEMINI_API_KEY not configured).");
+    const t1 = weakTopics[0] || 'Otkir miokard infarkti';
+    const t2 = weakTopics[1] || 'Pnevmotoraks va shoshilinch yordam';
+    const t3 = weakTopics[2] || 'Anafilaktik shok terapiyasi';
+    return [
+      { topic: t1, difficulty: 'Medium', reason: 'Zaif mavzuni mustahkamlash va amaliyot uchun' },
+      { topic: t2, difficulty: 'Hard', reason: 'Shoshilinch tibbiy yordam ko\'nikmasini oshirish' },
+      { topic: t3, difficulty: 'Medium', reason: 'Klinik tahlil va tezkor reaksiya bildirish' }
+    ];
+  }
+
   const prompt = `You are a medical simulation AI. The user is a ${isDoctor ? 'doctor' : 'medical student'} at level: ${courseLevel || 'beginner'}.
 They identified weak knowledge in these topics: ${(weakTopics && weakTopics.length) ? weakTopics.join(', ') : 'general medicine'}.
 Recommend 3 clinical scenario topics they should practice to improve their specific skills. IMPORTANT: The "topic" and "reason" values MUST be provided in this language: ${language}.
@@ -176,6 +264,19 @@ Respond ONLY with a valid JSON array matching this format (no markdown codeblock
     "reason": "1 short sentence why this helps them"
   }
 ]`;
-  const text = await generateWithRetry(prompt);
-  return parseJSON(text);
+
+  try {
+    const text = await generateWithRetry(prompt);
+    return parseJSON(text);
+  } catch (err) {
+    console.error("AI generateRecommendations failed, using fallback:", err);
+    const t1 = weakTopics[0] || 'Otkir miokard infarkti';
+    const t2 = weakTopics[1] || 'Pnevmotoraks va shoshilinch yordam';
+    const t3 = weakTopics[2] || 'Anafilaktik shok terapiyasi';
+    return [
+      { topic: t1, difficulty: 'Medium', reason: 'Zaif mavzuni mustahkamlash va amaliyot uchun' },
+      { topic: t2, difficulty: 'Hard', reason: 'Shoshilinch tibbiy yordam ko\'nikmasini oshirish' },
+      { topic: t3, difficulty: 'Medium', reason: 'Klinik tahlil va tezkor reaksiya bildirish' }
+    ];
+  }
 }

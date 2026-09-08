@@ -19,7 +19,7 @@ export default function QuestionnaireModal() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4002/api';
+    const API = process.env.NEXT_PUBLIC_API_URL || '/api';
 
     const addTopic = (e: React.KeyboardEvent | React.MouseEvent) => {
         if ('key' in e && e.key !== 'Enter') return;
@@ -47,16 +47,18 @@ export default function QuestionnaireModal() {
             const { data: sessionData } = await supabase.auth.getSession();
             const token = sessionData.session?.access_token;
 
-            // 1. Update the Supabase user profile directly on frontend
-            const { error: profileError } = await supabase.from('profiles').update({
-                course_level: courseLevel,
-                is_doctor: isDoctor,
-                weak_topics: weakTopics
-            }).eq('id', user.id);
-
-            if (profileError) {
-                console.error("Profile update error:", profileError);
-                // We'll continue anyway to at least fetch recommendations, or you can throw
+            // 1. Update user metadata in auth state
+            const { data: updatedAuth, error: authError } = await supabase.auth.updateUser({
+                data: {
+                    course_level: courseLevel,
+                    is_doctor: isDoctor,
+                    weak_topics: weakTopics
+                }
+            });
+            if (authError) {
+                console.error("Auth metadata update error:", authError);
+            } else if (updatedAuth?.user) {
+                useAuthStore.getState().setUser(updatedAuth.user);
             }
 
             // 2. Fetch AI Recommendations

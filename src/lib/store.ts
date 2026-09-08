@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { AIScenario, PatientStats, VisualState, ChatMessage, ActionResult } from './types';
 import { useI18n } from './i18n';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4002/api';
+const API = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 

@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import { AIScenario, ActionResult, PatientStats, VisualState } from '../types/simulation';
 
 // Default localhost config for iOS Simulator / Web, 10.0.2.2 for Android Emulator
-const DEFAULT_HOST = Platform.OS === 'android' ? 'http://10.0.2.2:4002/api' : 'http://localhost:4002/api';
+const DEFAULT_HOST = Platform.OS === 'android' ? 'http://10.0.2.2:3000/api' : 'http://localhost:3000/api';
 
 let customApiUrl: string | null = null;
 

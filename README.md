@@ -1,85 +1,92 @@
 # MedicAI — Professional Medical Simulation Platform
 
-MedicAI — bu shifokorlar va tibbiyot talabalari uchun sun'iy intellekt (Gemini AI) asosida ishlovchi klinik simulyatsiya platformasi. Loyiha frontend va backend qismlarini bitta toza monorepo tuzilmasida birlashtirgan.
+MedicAI — bu shifokorlar va tibbiyot talabalari uchun sun'iy intellekt (Gemini AI) asosida ishlovchi zamonaviy klinik simulyatsiya platformasi. Loyiha **Next.js Fullstack** arxitekturasida tuzilgan bo'lib, veb-interfeys va AI API serveri bitta loyihada birlashgan. Mobil ilova esa alohida Expo papkasida joylashgan.
 
 ---
 
-## 📁 Loyiha Strukturasi (Monorepo)
+## 📁 Loyiha Strukturasi
 
 ```text
 medicai/
-├── frontend/             # Next.js 16 (React 19, TailwindCSS, Zustand, Framer Motion)
-│   ├── src/              # UI komponentlar, sahifalar va do'kon (store)
-│   ├── public/           # Statik resurslar va rasmlar
-│   ├── .env.example      # Frontend muhit o'zgaruvchilari namunasi
+├── src/                      # Next.js Fullstack manba kodi
+│   ├── app/                  # App Router sahifalari va API route'lari
+│   │   ├── api/              # Server-side API endpointlar (start, action, recommendations, health)
+│   │   ├── login/            # Kirish sahifasi
+│   │   ├── register/         # Ro'yxatdan o'tish sahifasi
+│   │   ├── profile/          # Profil va statistika
+│   │   ├── layout.tsx        # Asosiy layout
+│   │   └── page.tsx          # Asosiy simulyatsiya ekrani
+│   ├── components/           # UI komponentlar (VitalMonitor, PatientVisualizer, ChatInterface...)
+│   └── lib/                  # AI Engine dvigateli, Supabase, Store, Tiplar, i18n
+│
+├── mobile/                   # React Native (Expo SDK 51, iOS/Android, TypeScript)
+│   ├── src/                  # Mobil UI, Vital monitor, Patient Visualizer
+│   ├── assets/               # App icon, Splash screen resurslari
 │   └── package.json
 │
-├── backend/              # Express.js API (TypeScript, Gemini 2.5 Flash, Supabase)
-│   ├── src/              # Server logikasi va AI simulyatsiya dvigateli
-│   ├── .env.example      # Backend muhit o'zgaruvchilari namunasi
-│   ├── vercel.json       # Backend deploy konfiguratsiyasi
-│   └── package.json
-│
-├── package.json          # Monorepo boshqaruv scriptlari
-├── .gitignore            # Umumiy ignore qoidalari
-└── README.md
+├── public/                   # Statik resurslar va rasmlar
+├── .env.example              # Muhit o'zgaruvchilari namunasi
+├── next.config.ts            # Next.js konfiguratsiyasi
+├── package.json              # Asosiy paketlar va scriptlar
+└── tsconfig.json             # TypeScript konfiguratsiyasi
 ```
 
 ---
 
 ## 🚀 Tezkor Ishga Tushirish (Quick Start)
 
-### 1. Bog'liqliklarni (Dependencies) O'rnatish
-
-Loyiha ildiz (root) papkasida barcha kerakli paketlarni bitta buyruq bilan o'rnating:
+### 1. Paketlarni O'rnatish
 
 ```bash
-npm run install:all
+npm install
 ```
-
-*(Yoki alohida o'rnatish uchun: `npm run install:backend` va `npm run install:frontend`)*
 
 ---
 
-### 2. Muhit O'zgaruvchilarini (.env) Sozlash
+### 2. Muhit O'zgaruvchilarini (.env.local) Sozlash
 
-#### Backend:
-`backend/.env.example` faylidan nusxa olib, `backend/.env` faylini yarating:
-```env
-PORT=4002
-GEMINI_API_KEY=sizning_gemini_api_kalitingiz
-FRONTEND_URL=http://localhost:3000
-```
+`.env.example` faylidan nusxa olib, `.env.local` faylini yarating:
 
-#### Frontend:
-`frontend/.env.example` faylidan nusxa olib, `frontend/.env.local` faylini yarating:
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:4002/api
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=sizning_supabase_proyekt_urlingiz
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sizning_supabase_anon_kalitingiz
+
+# Gemini AI Engine (Server-side)
+GEMINI_API_KEY=sizning_gemini_api_kalitingiz
 ```
 
 ---
 
-### 3. Serverlarni Ishga Tushirish
-
-Barcha tizimni (ham Frontend, ham Backend) parallel ravishda ishga tushirish uchun:
+### 3. Loyihani Ishga Tushirish
 
 ```bash
 npm run dev
 ```
 
-* **Frontend:** [http://localhost:3000](http://localhost:3000)
-* **Backend API:** [http://localhost:4002](http://localhost:4002)
-
-#### Alohida ishga tushirish:
-* **Faqat Frontend:** `npm run dev:frontend` (yoki `npm run dev:front`)
-* **Faqat Backend:** `npm run dev:backend` (yoki `npm run dev:back`)
+* **Veb-ilova va API:** [http://localhost:3000](http://localhost:3000)
+* **Health check:** [http://localhost:3000/api/health](http://localhost:3000/api/health)
 
 ---
 
-## 🛠 Qo'shimcha Buyruqlar
+### 📱 Mobil Ilova (Expo)
 
-* `npm run build` — Ham backend, ham frontend loyihalarini build qiladi.
-* `npm run build:backend` — Faqat backend TypeScript kodini compile qiladi.
-* `npm run build:frontend` — Faqat Next.js loyihasini production uchun build qiladi.
+Mobil ilovani ishga tushirish uchun:
+
+```bash
+# Agar birinchi marta bo'lsa:
+npm run install:mobile
+
+# Ishga tushirish:
+npm run dev:mobile
+```
+
+---
+
+## 🌐 Vercel-ga Deploy Qilish
+
+Loyiha to'liq **Next.js Fullstack** bo'lgani uchun:
+1. GitHub repozitoriyangizni Vercel-ga ulang.
+2. Hech qanday "Root Directory" o'zgartirish shart emas (`./` turishi kifoya).
+3. Vercel Environment Variables bo'limiga `GEMINI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL` va `NEXT_PUBLIC_SUPABASE_ANON_KEY` ni kiriting.
+4. **Deploy** tugmasini bosing — frontend ham, backend API route'lari ham avtomatik Vercel Serverless tizimida ishlaydi!

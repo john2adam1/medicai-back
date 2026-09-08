@@ -8,6 +8,7 @@ import { Heart, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function RegisterPage() {
+    const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -23,7 +24,12 @@ export default function RegisterPage() {
         try {
             const { data, error: sbError } = await supabase.auth.signUp({
                 email,
-                password
+                password,
+                options: {
+                    data: {
+                        full_name: fullName.trim()
+                    }
+                }
             });
             if (sbError) throw sbError;
             if (data.session || data.user) {
@@ -62,6 +68,21 @@ export default function RegisterPage() {
                                 {error}
                             </div>
                         )}
+
+                        <div>
+                            <label className="block text-sm font-medium text-[var(--color-text-2)] mb-1">
+                                Full Name (To'liq ism / Familiya)
+                            </label>
+                            <input
+                                type="text"
+                                required
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
+                                placeholder="e.g. Ali Valiyev"
+                                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md shadow-sm placeholder-[var(--color-text-3)] focus:outline-none focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] bg-[var(--color-surface-2)] text-[var(--color-text)] sm:text-sm"
+                            />
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium text-[var(--color-text-2)] mb-1">
                                 Email address

@@ -28,6 +28,20 @@ export interface AIScenario {
     time_limit_minutes: number;
 }
 
+export interface ActionResult {
+    simulation_status: 'in_progress' | 'success' | 'failed';
+    medical_text: string;
+    feedback: string;
+    feedback_type: 'success' | 'error' | 'warning' | 'info';
+    patient_stats: PatientStats;
+    visual_state: VisualState;
+    score_impact: number;
+    health_bar: number;
+    is_alive: boolean;
+    game_over: boolean;
+    game_over_reason?: string;
+}
+
 export interface ChatMessage {
     id: string;
     role: 'user' | 'assistant' | 'system';
@@ -49,22 +63,9 @@ export interface RecommendedScenario {
 export interface UserProfile {
     id: string;
     email: string;
-    passwordHash: string;
+    passwordHash?: string;
     course_level?: string;
     weak_topics?: string[];
     is_doctor?: boolean;
 }
 
-export interface ActionResult {
-    simulation_status: 'in_progress' | 'success' | 'failed';
-    medical_text: string;
-    feedback: string;
-    feedback_type: 'success' | 'error' | 'warning' | 'info';
-    patient_stats: PatientStats;
-    visual_state: VisualState;
-    score_impact: number;
-    health_bar: number;
-    is_alive: boolean;
-    game_over: boolean;
-    game_over_reason?: string;
-}

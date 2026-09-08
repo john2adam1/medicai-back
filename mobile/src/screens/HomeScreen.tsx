@@ -151,7 +151,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               style={styles.hostInput}
               value={customHost}
               onChangeText={setCustomHost}
-              placeholder="http://192.168.1.X:4002/api"
+              placeholder="http://192.168.1.X:3000/api"
               placeholderTextColor="#64748B"
               autoCapitalize="none"
             />

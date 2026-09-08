@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { ArrowLeft, User, Settings, CreditCard, Palette, Globe, Award, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, User, Settings, CreditCard, Palette, Globe, Award, Loader2, ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslation, useI18n, Language } from '@/lib/i18n';
 import { useAuthStore } from '@/lib/auth-store';
@@ -13,14 +13,41 @@ export default function ProfilePage() {
     const { lang, setLang } = useI18n();
     const { user, setUser } = useAuthStore();
 
-    const [isPersonalOpen, setIsPersonalOpen] = useState(false);
+    const [isPersonalOpen, setIsPersonalOpen] = useState(true);
     const [fullName, setFullName] = useState(user?.user_metadata?.full_name || user?.user_metadata?.first_name || '');
     const [email, setEmail] = useState(user?.email || '');
-    const [courseLevel, setCourseLevel] = useState(user?.user_metadata?.course_level || '1');
+    const [courseLevel, setCourseLevel] = useState(user?.user_metadata?.course_level || '3-kurs student');
+    const [isDoctor, setIsDoctor] = useState<boolean>(Boolean(user?.user_metadata?.is_doctor));
+    const [weakTopics, setWeakTopics] = useState<string[]>(user?.user_metadata?.weak_topics || []);
+    const [weakTopicInput, setWeakTopicInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState({ type: '', text: '' });
 
+    useEffect(() => {
+        if (user) {
+            setFullName(user?.user_metadata?.full_name || user?.user_metadata?.first_name || '');
+            setEmail(user?.email || '');
+            setCourseLevel(user?.user_metadata?.course_level || '3-kurs student');
+            setIsDoctor(Boolean(user?.user_metadata?.is_doctor));
+            setWeakTopics(user?.user_metadata?.weak_topics || []);
+        }
+    }, [user]);
+
     const userPoints = user?.user_metadata?.points || 0;
+
+    const addTopic = (e: React.KeyboardEvent | React.MouseEvent) => {
+        if ('key' in e && e.key !== 'Enter') return;
+        e.preventDefault();
+        const topic = weakTopicInput.trim();
+        if (topic && !weakTopics.includes(topic)) {
+            setWeakTopics([...weakTopics, topic]);
+        }
+        setWeakTopicInput('');
+    };
+
+    const removeTopic = (topicToRemove: string) => {
+        setWeakTopics(weakTopics.filter(t => t !== topicToRemove));
+    };
 
     const handleSavePersonalInfo = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -36,24 +63,20 @@ export default function ProfilePage() {
 
             // Update auth metadata
             const { data, error: metaError } = await supabase.auth.updateUser({
-                data: { full_name: fullName, course_level: courseLevel }
+                data: {
+                    full_name: fullName.trim(),
+                    course_level: courseLevel,
+                    is_doctor: isDoctor,
+                    weak_topics: weakTopics
+                }
             });
             if (metaError) throw metaError;
-
-            // Update profiles table safely
-            if (user?.id) {
-                const { error: profileError } = await supabase.from('profiles').update({
-                    course_level: courseLevel,
-                }).eq('id', user.id);
-                // Allow failure on profiles if it doesn't exist
-                if (profileError) console.warn("Could not update profiles table:", profileError);
-            }
 
             if (data.user) {
                 setUser(data.user);
             }
             setMsg({ type: 'success', text: 'Ma\'lumotlar muvaffaqiyatli saqlandi!' });
-            setTimeout(() => { setIsPersonalOpen(false); setMsg({ type: '', text: '' }); }, 2000);
+            setTimeout(() => { setMsg({ type: '', text: '' }); }, 3000);
         } catch (err: any) {
             setMsg({ type: 'error', text: err.message || 'Xatolik yuz berdi' });
         } finally {
@@ -154,27 +177,65 @@ export default function ProfilePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-[var(--color-text-2)] mb-1">Tibbiy daraja</label>
-                                    <select
+                                    <label className="block text-sm font-medium text-[var(--color-text-2)] mb-1">Tibbiy daraja / Kurs</label>
+                                    <input
+                                        type="text"
                                         value={courseLevel}
                                         onChange={e => setCourseLevel(e.target.value)}
+                                        placeholder="masalan: 3-kurs student, Resident..."
                                         className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] bg-[var(--color-bg)] text-[var(--color-text)] sm:text-sm"
-                                    >
-                                        <option value="1">1-kurs</option>
-                                        <option value="2">2-kurs</option>
-                                        <option value="3">3-kurs</option>
-                                        <option value="4">4-kurs</option>
-                                        <option value="5">5-kurs</option>
-                                        <option value="6">6-kurs</option>
-                                        <option value="resident">Residantura/Magistratura</option>
-                                        <option value="doctor">Tajribali shifokor</option>
-                                    </select>
+                                    />
                                 </div>
+
+                                <div className="flex items-center gap-2 pt-1">
+                                    <input
+                                        type="checkbox"
+                                        id="profile_is_doctor"
+                                        checked={isDoctor}
+                                        onChange={e => setIsDoctor(e.target.checked)}
+                                        className="h-4 w-4 text-[var(--color-accent)] border-[var(--color-border)] rounded focus:ring-[var(--color-accent)] cursor-pointer"
+                                    />
+                                    <label htmlFor="profile_is_doctor" className="text-sm font-medium text-[var(--color-text-2)] cursor-pointer select-none">
+                                        Amaliyotchi shifokorman (Practicing doctor)
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-[var(--color-text-2)] mb-1">
+                                        Zaif mavzular (Weak topics)
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={weakTopicInput}
+                                            onChange={e => setWeakTopicInput(e.target.value)}
+                                            onKeyDown={addTopic}
+                                            placeholder="masalan: kardiologiya, nevrologiya"
+                                            className="flex-1 px-3 py-2 border border-[var(--color-border)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] bg-[var(--color-bg)] text-[var(--color-text)] sm:text-sm"
+                                        />
+                                        <button type="button" onClick={addTopic} className="px-3 py-2 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-md hover:bg-[var(--color-border)] transition-colors">
+                                            <Plus className="w-5 h-5 text-[var(--color-text-2)]" />
+                                        </button>
+                                    </div>
+                                    {weakTopics.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-3">
+                                            {weakTopics.map(topic => (
+                                                <div key={topic} className="flex items-center gap-1 bg-[var(--color-accent)]/10 text-[var(--color-accent)] px-2.5 py-1 rounded-full text-xs font-medium">
+                                                    {topic}
+                                                    <button type="button" onClick={() => removeTopic(topic)} className="hover:bg-[var(--color-accent)]/20 rounded-full p-0.5 transition-colors">
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="flex justify-end pt-2">
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-[var(--color-bg)] bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-accent)] disabled:opacity-50 transition-colors"
+                                        className="flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-accent)] disabled:opacity-50 transition-colors"
                                     >
                                         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Saqlash'}
                                     </button>
