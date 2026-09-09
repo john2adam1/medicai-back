@@ -19,11 +19,6 @@ medicai/
 │   ├── components/           # UI komponentlar (VitalMonitor, PatientVisualizer, ChatInterface...)
 │   └── lib/                  # AI Engine dvigateli, Supabase, Store, Tiplar, i18n
 │
-├── mobile/                   # React Native (Expo SDK 51, iOS/Android, TypeScript)
-│   ├── src/                  # Mobil UI, Vital monitor, Patient Visualizer
-│   ├── assets/               # App icon, Splash screen resurslari
-│   └── package.json
-│
 ├── public/                   # Statik resurslar va rasmlar
 ├── .env.example              # Muhit o'zgaruvchilari namunasi
 ├── next.config.ts            # Next.js konfiguratsiyasi
@@ -66,20 +61,6 @@ npm run dev
 
 * **Veb-ilova va API:** [http://localhost:3000](http://localhost:3000)
 * **Health check:** [http://localhost:3000/api/health](http://localhost:3000/api/health)
-
----
-
-### 📱 Mobil Ilova (Expo)
-
-Mobil ilovani ishga tushirish uchun:
-
-```bash
-# Agar birinchi marta bo'lsa:
-npm run install:mobile
-
-# Ishga tushirish:
-npm run dev:mobile
-```
 
 ---
 
